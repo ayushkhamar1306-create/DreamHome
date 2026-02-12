@@ -10,7 +10,7 @@ const {
   sendInquiryNotification, 
   sendInquiryAcceptedEmail, 
   sendInquiryDeclinedEmail 
-} = require('../utils/emailService');
+} = require('../utils/Emailservice');
 
 // Configure multer for memory storage
 const storage = multer.memoryStorage();
