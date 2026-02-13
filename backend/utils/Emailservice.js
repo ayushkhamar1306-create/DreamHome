@@ -1,29 +1,14 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 
-// Create reusable transporter - UPDATED to use port 587 for better compatibility with Render
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: 'smtp.gmail.com',
-    port: 587, // Changed from 465 to 587 for TLS
-    secure: false, // Use STARTTLS instead of SSL
-    auth: {
-      user: process.env.EMAIL_USER, // Your Gmail address
-      pass: process.env.EMAIL_PASSWORD, // Your Gmail App Password
-    },
-    tls: {
-      rejectUnauthorized: false // Added for compatibility with some hosting providers
-    }
-  });
-};
+// Initialize Resend with API key
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Send OTP Email
 const sendOTPEmail = async (email, otp, name) => {
   try {
-    const transporter = createTransporter();
-
-    const mailOptions = {
-      from: `"DreamHome" <${process.env.EMAIL_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: 'DreamHome <onboarding@resend.dev>', // Use resend.dev for testing, or your verified domain
+      to: [email],
       subject: 'Verify Your Email - DreamHome',
       html: `
         <!DOCTYPE html>
@@ -118,14 +103,17 @@ const sendOTPEmail = async (email, otp, name) => {
         </body>
         </html>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('OTP Email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    console.log('OTP Email sent:', data.id);
+    return { success: true, messageId: data.id };
   } catch (error) {
     console.error('Error sending OTP email:', error);
-    console.error('Email send error:', error);
     throw error;
   }
 };
@@ -133,15 +121,13 @@ const sendOTPEmail = async (email, otp, name) => {
 // Send Welcome Email (after verification)
 const sendWelcomeEmail = async (email, name, role) => {
   try {
-    const transporter = createTransporter();
-
     const roleMessage = role === 'seller' 
       ? 'You can now start listing your properties and connect with potential buyers.'
       : 'You can now browse and inquire about properties that match your needs.';
 
-    const mailOptions = {
-      from: `"DreamHome" <${process.env.EMAIL_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: 'DreamHome <onboarding@resend.dev>',
+      to: [email],
       subject: 'Welcome to DreamHome! 🎉',
       html: `
         <!DOCTYPE html>
@@ -210,21 +196,6 @@ const sendWelcomeEmail = async (email, name, role) => {
                 </a>
               </div>
 
-              <h3>What's Next?</h3>
-              <ul>
-                ${role === 'seller' ? `
-                  <li>Complete your seller profile</li>
-                  <li>Upload your first property listing</li>
-                  <li>Connect with potential buyers</li>
-                ` : `
-                  <li>Browse available properties</li>
-                  <li>Save your favorite listings</li>
-                  <li>Contact sellers directly</li>
-                `}
-              </ul>
-
-              <p>If you have any questions or need assistance, feel free to reach out to our support team.</p>
-              
               <p>Happy house hunting!<br><strong>The DreamHome Team</strong></p>
             </div>
             <div class="footer">
@@ -234,11 +205,15 @@ const sendWelcomeEmail = async (email, name, role) => {
         </body>
         </html>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Welcome Email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    console.log('Welcome Email sent:', data.id);
+    return { success: true, messageId: data.id };
   } catch (error) {
     console.error('Error sending welcome email:', error);
     throw error;
@@ -248,11 +223,9 @@ const sendWelcomeEmail = async (email, name, role) => {
 // Send Password Reset OTP Email
 const sendPasswordResetOTP = async (email, otp, name) => {
   try {
-    const transporter = createTransporter();
-
-    const mailOptions = {
-      from: `"DreamHome" <${process.env.EMAIL_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: 'DreamHome <onboarding@resend.dev>',
+      to: [email],
       subject: 'Password Reset Request - DreamHome',
       html: `
         <!DOCTYPE html>
@@ -301,20 +274,6 @@ const sendPasswordResetOTP = async (email, otp, name) => {
               color: #666;
               font-size: 12px;
             }
-            .warning {
-              background: #ffe5e5;
-              border-left: 4px solid #f5576c;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .info-box {
-              background: #e3f2fd;
-              border-left: 4px solid #2196f3;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
           </style>
         </head>
         <body>
@@ -325,7 +284,7 @@ const sendPasswordResetOTP = async (email, otp, name) => {
             </div>
             <div class="content">
               <h2>Hello ${name},</h2>
-              <p>We received a request to reset your password. Use the verification code below to proceed with resetting your password.</p>
+              <p>We received a request to reset your password. Use the verification code below to proceed.</p>
               
               <div class="otp-box">
                 <p style="margin: 0; font-size: 14px; color: #666;">Your password reset code is:</p>
@@ -333,42 +292,26 @@ const sendPasswordResetOTP = async (email, otp, name) => {
                 <p style="margin: 10px 0 0 0; font-size: 12px; color: #999;">Valid for 10 minutes</p>
               </div>
 
-              <div class="info-box">
-                <strong>ℹ️ What happens next?</strong>
-                <ol style="margin: 10px 0 0 0; padding-left: 20px;">
-                  <li>Enter this code on the password reset page</li>
-                  <li>Create your new password</li>
-                  <li>Login with your new credentials</li>
-                </ol>
-              </div>
-
-              <div class="warning">
-                <strong>⚠️ Security Warning:</strong>
-                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-                  <li>Never share this code with anyone</li>
-                  <li>DreamHome staff will never ask for your OTP</li>
-                  <li>If you didn't request this, please ignore this email and your password will remain unchanged</li>
-                  <li>Consider changing your password if you suspect unauthorized access</li>
-                </ul>
-              </div>
-
-              <p>If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.</p>
+              <p>If you didn't request a password reset, please ignore this email.</p>
               
               <p>Best regards,<br><strong>The DreamHome Security Team</strong></p>
             </div>
             <div class="footer">
               <p>© 2024 DreamHome. All rights reserved.</p>
-              <p>This is an automated security email. Please do not reply.</p>
             </div>
           </div>
         </body>
         </html>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Password Reset OTP Email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    console.log('Password Reset OTP Email sent:', data.id);
+    return { success: true, messageId: data.id };
   } catch (error) {
     console.error('Error sending password reset OTP email:', error);
     throw error;
@@ -378,11 +321,9 @@ const sendPasswordResetOTP = async (email, otp, name) => {
 // Send Password Changed Confirmation Email
 const sendPasswordChangedConfirmation = async (email, name) => {
   try {
-    const transporter = createTransporter();
-
-    const mailOptions = {
-      from: `"DreamHome" <${process.env.EMAIL_USER}>`,
-      to: email,
+    const { data, error } = await resend.emails.send({
+      from: 'DreamHome <onboarding@resend.dev>',
+      to: [email],
       subject: 'Password Successfully Changed - DreamHome',
       html: `
         <!DOCTYPE html>
@@ -422,91 +363,38 @@ const sendPasswordChangedConfirmation = async (email, name) => {
               color: #666;
               font-size: 12px;
             }
-            .warning {
-              background: #fff3cd;
-              border-left: 4px solid #ffc107;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .info-box {
-              background: #e8f5e9;
-              border-left: 4px solid #4caf50;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .cta-button {
-              display: inline-block;
-              background: #4caf50;
-              color: white;
-              padding: 12px 30px;
-              text-decoration: none;
-              border-radius: 5px;
-              margin: 20px 0;
-            }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
               <h1>✅ Password Changed Successfully</h1>
-              <p>DreamHome Security</p>
             </div>
             <div class="content">
               <div class="success-icon">🔒</div>
               <h2>Hello ${name},</h2>
               <p>Your password has been successfully changed. You can now login with your new password.</p>
               
-              <div class="info-box">
-                <strong>✓ What changed?</strong>
-                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-                  <li>Your password has been updated</li>
-                  <li>All devices remain logged in</li>
-                  <li>Your account security has been enhanced</li>
-                </ul>
-              </div>
-
-              <div style="text-align: center;">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/login" class="cta-button">
-                  Login to Your Account
-                </a>
-              </div>
-
-              <div class="warning">
-                <strong>⚠️ Didn't make this change?</strong>
-                <p style="margin: 10px 0 0 0;">
-                  If you did not change your password, please contact our support team immediately at 
-                  <strong>${process.env.SUPPORT_EMAIL || 'support@dreamhome.com'}</strong>. 
-                  Your account security may be compromised.
-                </p>
-              </div>
-
-              <h3>Security Tips:</h3>
-              <ul>
-                <li>Never share your password with anyone</li>
-                <li>Use a unique password for DreamHome</li>
-                <li>Enable two-factor authentication (coming soon)</li>
-                <li>Update your password regularly</li>
-              </ul>
-
               <p>Thank you for keeping your account secure!</p>
               
               <p>Best regards,<br><strong>The DreamHome Security Team</strong></p>
             </div>
             <div class="footer">
               <p>© 2024 DreamHome. All rights reserved.</p>
-              <p>This is an automated security notification. Please do not reply.</p>
             </div>
           </div>
         </body>
         </html>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Password Changed Confirmation Email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    console.log('Password Changed Confirmation Email sent:', data.id);
+    return { success: true, messageId: data.id };
   } catch (error) {
     console.error('Error sending password changed confirmation email:', error);
     throw error;
@@ -516,8 +404,6 @@ const sendPasswordChangedConfirmation = async (email, name) => {
 // Send Inquiry Notification to Seller
 const sendInquiryNotification = async (sellerEmail, sellerName, inquiryData) => {
   try {
-    const transporter = createTransporter();
-
     const {
       buyerName,
       buyerEmail,
@@ -528,333 +414,137 @@ const sendInquiryNotification = async (sellerEmail, sellerName, inquiryData) => 
       propertyPrice,
     } = inquiryData;
 
-    const mailOptions = {
-      from: `"DreamHome" <${process.env.EMAIL_USER}>`,
-      to: sellerEmail,
+    const { data, error } = await resend.emails.send({
+      from: 'DreamHome <onboarding@resend.dev>',
+      to: [sellerEmail],
       subject: `New Inquiry for Your Property - ${propertyTitle}`,
       html: `
         <!DOCTYPE html>
         <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-              border-radius: 10px 10px 0 0;
-            }
-            .content {
-              background: #f9f9f9;
-              padding: 30px;
-              border-radius: 0 0 10px 10px;
-            }
-            .property-info {
-              background: #fff3f2;
-              border-left: 4px solid #667eea;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .buyer-details {
-              background: white;
-              border: 1px solid #e0e0e0;
-              border-radius: 8px;
-              padding: 15px;
-              margin: 15px 0;
-            }
-            .cta-button {
-              display: inline-block;
-              background: #667eea;
-              color: white;
-              padding: 12px 30px;
-              text-decoration: none;
-              border-radius: 5px;
-              margin: 20px 0;
-              font-weight: bold;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 20px;
-              color: #666;
-              font-size: 12px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>🔔 New Property Inquiry</h1>
-              <p>Someone is interested in your property!</p>
+        <body style="font-family: Arial, sans-serif;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1>🔔 New Property Inquiry</h1>
+            <h2>Hello ${sellerName},</h2>
+            <p>You have received a new inquiry!</p>
+            
+            <div style="background: #f0f0f0; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3>Property: ${propertyTitle}</h3>
+              <p><strong>Address:</strong> ${propertyAddress}</p>
+              <p><strong>Price:</strong> ${propertyPrice}</p>
             </div>
-            <div class="content">
-              <h2>Hello ${sellerName},</h2>
-              <p>Great news! You have received a new inquiry for one of your property listings.</p>
-              
-              <div class="property-info">
-                <strong>📍 Property Details:</strong>
-                <div style="margin-top: 10px;">
-                  <div><strong>Title:</strong> ${propertyTitle}</div>
-                  <div><strong>Address:</strong> ${propertyAddress}</div>
-                  <div><strong>Price:</strong> ${propertyPrice}</div>
-                </div>
-              </div>
 
-              <h3>👤 Buyer Information:</h3>
-              <div class="buyer-details">
-                <div><strong>Name:</strong> ${buyerName}</div>
-                <div><strong>Email:</strong> ${buyerEmail}</div>
-                <div><strong>Phone:</strong> ${buyerPhone}</div>
-                <div><strong>Profession:</strong> ${buyerProfession}</div>
-              </div>
-
-              <div style="text-align: center;">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/manage-inquiries" class="cta-button">
-                  View & Respond to Inquiry
-                </a>
-              </div>
-
-              <p>Best regards,<br><strong>The DreamHome Team</strong></p>
+            <div style="background: white; border: 1px solid #ddd; padding: 15px; border-radius: 5px;">
+              <h3>Buyer Information:</h3>
+              <p><strong>Name:</strong> ${buyerName}</p>
+              <p><strong>Email:</strong> ${buyerEmail}</p>
+              <p><strong>Phone:</strong> ${buyerPhone}</p>
+              <p><strong>Profession:</strong> ${buyerProfession}</p>
             </div>
-            <div class="footer">
-              <p>© 2024 DreamHome. All rights reserved.</p>
-            </div>
+
+            <p style="margin-top: 20px;">Best regards,<br><strong>The DreamHome Team</strong></p>
           </div>
         </body>
         </html>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Inquiry Notification Email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    console.log('Inquiry Notification Email sent:', data.id);
+    return { success: true, messageId: data.id };
   } catch (error) {
     console.error('Error sending inquiry notification email:', error);
     throw error;
   }
 };
 
-// Send Inquiry Status Update to Buyer (Accepted)
+// Send Inquiry Accepted Email
 const sendInquiryAcceptedEmail = async (buyerEmail, buyerName, inquiryData) => {
   try {
-    const transporter = createTransporter();
+    const { propertyTitle, sellerName, sellerEmail, sellerPhone } = inquiryData;
 
-    const {
-      propertyTitle,
-      propertyAddress,
-      sellerName,
-      sellerEmail,
-      sellerPhone,
-    } = inquiryData;
-
-    const mailOptions = {
-      from: `"DreamHome" <${process.env.EMAIL_USER}>`,
-      to: buyerEmail,
+    const { data, error } = await resend.emails.send({
+      from: 'DreamHome <onboarding@resend.dev>',
+      to: [buyerEmail],
       subject: `✅ Your Inquiry Accepted - ${propertyTitle}`,
       html: `
         <!DOCTYPE html>
         <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-              border-radius: 10px 10px 0 0;
-            }
-            .content {
-              background: #f9f9f9;
-              padding: 30px;
-              border-radius: 0 0 10px 10px;
-            }
-            .contact-box {
-              background: white;
-              border: 2px solid #4caf50;
-              border-radius: 8px;
-              padding: 20px;
-              margin: 20px 0;
-            }
-            .cta-button {
-              display: inline-block;
-              background: #4caf50;
-              color: white;
-              padding: 12px 30px;
-              text-decoration: none;
-              border-radius: 5px;
-              margin: 10px 5px;
-              font-weight: bold;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 20px;
-              color: #666;
-              font-size: 12px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>✅ Inquiry Accepted!</h1>
-              <p>The seller wants to connect with you</p>
+        <body style="font-family: Arial, sans-serif;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1>✅ Inquiry Accepted!</h1>
+            <h2>Great News, ${buyerName}!</h2>
+            <p>The property owner has accepted your inquiry for ${propertyTitle}.</p>
+            
+            <div style="background: #e8f5e9; padding: 15px; border-radius: 5px; margin: 20px 0;">
+              <h3>Seller Contact Information:</h3>
+              <p><strong>Name:</strong> ${sellerName}</p>
+              <p><strong>Email:</strong> ${sellerEmail}</p>
+              <p><strong>Phone:</strong> ${sellerPhone}</p>
             </div>
-            <div class="content">
-              <h2>Great News, ${buyerName}!</h2>
-              <p>The property owner has accepted your inquiry.</p>
-              
-              <h3>📞 Seller Contact:</h3>
-              <div class="contact-box">
-                <div><strong>Name:</strong> ${sellerName}</div>
-                <div><strong>Email:</strong> ${sellerEmail}</div>
-                <div><strong>Phone:</strong> ${sellerPhone}</div>
-              </div>
 
-              <div style="text-align: center;">
-                <a href="mailto:${sellerEmail}" class="cta-button">📧 Send Email</a>
-                <a href="tel:${sellerPhone}" class="cta-button">📱 Call Now</a>
-              </div>
-
-              <p>Best regards,<br><strong>The DreamHome Team</strong></p>
-            </div>
-            <div class="footer">
-              <p>© 2024 DreamHome. All rights reserved.</p>
-            </div>
+            <p>Best regards,<br><strong>The DreamHome Team</strong></p>
           </div>
         </body>
         </html>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Inquiry Accepted Email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    console.log('Inquiry Accepted Email sent:', data.id);
+    return { success: true, messageId: data.id };
   } catch (error) {
     console.error('Error sending inquiry accepted email:', error);
     throw error;
   }
 };
 
-// Send Inquiry Status Update to Buyer (Declined)
+// Send Inquiry Declined Email
 const sendInquiryDeclinedEmail = async (buyerEmail, buyerName, inquiryData) => {
   try {
-    const transporter = createTransporter();
+    const { propertyTitle, declineReason } = inquiryData;
 
-    const {
-      propertyTitle,
-      declineReason,
-    } = inquiryData;
-
-    const mailOptions = {
-      from: `"DreamHome" <${process.env.EMAIL_USER}>`,
-      to: buyerEmail,
+    const { data, error } = await resend.emails.send({
+      from: 'DreamHome <onboarding@resend.dev>',
+      to: [buyerEmail],
       subject: `Inquiry Update - ${propertyTitle}`,
       html: `
         <!DOCTYPE html>
         <html>
-        <head>
-          <style>
-            body {
-              font-family: Arial, sans-serif;
-              line-height: 1.6;
-              color: #333;
-            }
-            .container {
-              max-width: 600px;
-              margin: 0 auto;
-              padding: 20px;
-            }
-            .header {
-              background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
-              color: white;
-              padding: 30px;
-              text-align: center;
-              border-radius: 10px 10px 0 0;
-            }
-            .content {
-              background: #f9f9f9;
-              padding: 30px;
-              border-radius: 0 0 10px 10px;
-            }
-            .reason-box {
-              background: white;
-              border: 1px solid #e0e0e0;
-              border-radius: 8px;
-              padding: 20px;
-              margin: 20px 0;
-            }
-            .cta-button {
-              display: inline-block;
-              background: #667eea;
-              color: white;
-              padding: 12px 30px;
-              text-decoration: none;
-              border-radius: 5px;
-              margin: 20px 0;
-              font-weight: bold;
-            }
-            .footer {
-              text-align: center;
-              margin-top: 20px;
-              color: #666;
-              font-size: 12px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>Inquiry Status Update</h1>
-            </div>
-            <div class="content">
-              <h2>Hello ${buyerName},</h2>
-              <p>The seller has declined your inquiry for ${propertyTitle}.</p>
-              
+        <body style="font-family: Arial, sans-serif;">
+          <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
+            <h1>Inquiry Status Update</h1>
+            <h2>Hello ${buyerName},</h2>
+            <p>The seller has declined your inquiry for ${propertyTitle}.</p>
+            
+            <div style="background: #fff3e0; padding: 15px; border-radius: 5px; margin: 20px 0;">
               <h3>Reason:</h3>
-              <div class="reason-box">
-                <p>${declineReason}</p>
-              </div>
-
-              <div style="text-align: center;">
-                <a href="${process.env.FRONTEND_URL || 'http://localhost:3000'}/properties" class="cta-button">
-                  Browse More Properties
-                </a>
-              </div>
-
-              <p>Best regards,<br><strong>The DreamHome Team</strong></p>
+              <p>${declineReason}</p>
             </div>
-            <div class="footer">
-              <p>© 2024 DreamHome. All rights reserved.</p>
-            </div>
+
+            <p>Keep searching - there are many other great properties available!</p>
+            
+            <p>Best regards,<br><strong>The DreamHome Team</strong></p>
           </div>
         </body>
         </html>
       `,
-    };
+    });
 
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Inquiry Declined Email sent:', info.messageId);
-    return { success: true, messageId: info.messageId };
+    if (error) {
+      console.error('Resend error:', error);
+      throw error;
+    }
+
+    console.log('Inquiry Declined Email sent:', data.id);
+    return { success: true, messageId: data.id };
   } catch (error) {
     console.error('Error sending inquiry declined email:', error);
     throw error;
