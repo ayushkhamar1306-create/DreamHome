@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { User, Mail, Lock, Phone, Shield, CheckCircle } from 'lucide-react';
+import api from '@/app/lib/api'; // Import the centralized api instance
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -66,33 +67,21 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register/request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: formData.name,
-          email: formData.email,
-          phone: formData.phone,
-          password: formData.password,
-          role: formData.role,
-        }),
+      const response = await api.post('/auth/register/request', {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        password: formData.password,
+        role: formData.role,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data?.message ?? 'Registration failed');
-        setIsLoading(false);
-        return;
-      }
 
       // Success - move to OTP verification step
       setStep('verify');
       setSuccessMessage('OTP sent to your email! Please check your inbox.');
       startResendTimer();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('An error occurred. Please try again.');
+      setError(err.response?.data?.message ?? 'Registration failed');
     } finally {
       setIsLoading(false);
     }
@@ -112,42 +101,30 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-          otp: otp,
-        }),
+      const response = await api.post('/auth/register/verify', {
+        email: formData.email,
+        otp: otp,
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data?.message ?? 'OTP verification failed');
-        setIsLoading(false);
-        return;
-      }
-
       // Store token and user in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
 
       setSuccessMessage('Registration successful! Redirecting...');
 
       // Redirect based on role
       setTimeout(() => {
-        if (data.user.role === 'admin') {
+        if (response.data.user.role === 'admin') {
           router.push('/admin/dashboard');
-        } else if (data.user.role === 'seller') {
+        } else if (response.data.user.role === 'seller') {
           router.push('/profile');
         } else {
           router.push('/');
         }
       }, 1500);
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('An error occurred. Please try again.');
+      setError(err.response?.data?.message ?? 'OTP verification failed');
     } finally {
       setIsLoading(false);
     }
@@ -162,27 +139,15 @@ export default function RegisterPage() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: formData.email,
-        }),
+      await api.post('/auth/register/resend-otp', {
+        email: formData.email,
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data?.message ?? 'Failed to resend OTP');
-        setIsLoading(false);
-        return;
-      }
 
       setSuccessMessage('OTP resent successfully! Please check your email.');
       startResendTimer();
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('Failed to resend OTP. Please try again.');
+      setError(err.response?.data?.message ?? 'Failed to resend OTP');
     } finally {
       setIsLoading(false);
     }

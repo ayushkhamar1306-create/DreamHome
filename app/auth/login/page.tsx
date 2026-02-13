@@ -7,6 +7,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Mail, Lock } from 'lucide-react';
+import api from '@/app/lib/api'; // Import the centralized api instance
 
 export default function LoginPage() {
   const router = useRouter();
@@ -31,35 +32,23 @@ export default function LoginPage() {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:5000/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setError(data?.message ?? 'Login failed');
-        setIsLoading(false);
-        return;
-      }
+      const response = await api.post('/auth/login', formData);
 
       // Store token and user in localStorage
-      localStorage.setItem('token', data.token);
-      localStorage.setItem('user', JSON.stringify(data.user));
+      localStorage.setItem('token', response.data.token);
+      localStorage.setItem('user', JSON.stringify(response.data.user));
 
       // Redirect based on role
-      if (data.user.role === 'admin') {
+      if (response.data.user.role === 'admin') {
         router.push('/admin/dashboard');
-      } else if (data.user.role === 'seller') {
+      } else if (response.data.user.role === 'seller') {
         router.push('/');
       } else {
         router.push('/');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      setError('An error occurred. Please try again.');
+      setError(err.response?.data?.message ?? 'Login failed');
     } finally {
       setIsLoading(false);
     }
