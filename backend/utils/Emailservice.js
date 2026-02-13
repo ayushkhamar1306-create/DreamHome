@@ -1,13 +1,18 @@
 const nodemailer = require('nodemailer');
 
-// Create reusable transporter
+// Create reusable transporter - UPDATED to use port 587 for better compatibility with Render
 const createTransporter = () => {
   return nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 587, // Changed from 465 to 587 for TLS
+    secure: false, // Use STARTTLS instead of SSL
     auth: {
       user: process.env.EMAIL_USER, // Your Gmail address
       pass: process.env.EMAIL_PASSWORD, // Your Gmail App Password
     },
+    tls: {
+      rejectUnauthorized: false // Added for compatibility with some hosting providers
+    }
   });
 };
 
@@ -120,6 +125,7 @@ const sendOTPEmail = async (email, otp, name) => {
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('Error sending OTP email:', error);
+    console.error('Email send error:', error);
     throw error;
   }
 };
@@ -542,7 +548,7 @@ const sendInquiryNotification = async (sellerEmail, sellerName, inquiryData) => 
               padding: 20px;
             }
             .header {
-              background: linear-gradient(135deg, #b04439 0%, #8f3730 100%);
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
               color: white;
               padding: 30px;
               text-align: center;
@@ -553,16 +559,9 @@ const sendInquiryNotification = async (sellerEmail, sellerName, inquiryData) => 
               padding: 30px;
               border-radius: 0 0 10px 10px;
             }
-            .inquiry-box {
-              background: white;
-              border: 2px solid #e0e0e0;
-              border-radius: 8px;
-              padding: 20px;
-              margin: 20px 0;
-            }
             .property-info {
               background: #fff3f2;
-              border-left: 4px solid #b04439;
+              border-left: 4px solid #667eea;
               padding: 15px;
               margin: 20px 0;
               border-radius: 4px;
@@ -574,27 +573,9 @@ const sendInquiryNotification = async (sellerEmail, sellerName, inquiryData) => 
               padding: 15px;
               margin: 15px 0;
             }
-            .detail-row {
-              display: flex;
-              padding: 10px 0;
-              border-bottom: 1px solid #f0f0f0;
-            }
-            .detail-row:last-child {
-              border-bottom: none;
-            }
-            .detail-label {
-              font-weight: bold;
-              color: #666;
-              width: 120px;
-              flex-shrink: 0;
-            }
-            .detail-value {
-              color: #333;
-              flex: 1;
-            }
             .cta-button {
               display: inline-block;
-              background: #b04439;
+              background: #667eea;
               color: white;
               padding: 12px 30px;
               text-decoration: none;
@@ -608,25 +589,12 @@ const sendInquiryNotification = async (sellerEmail, sellerName, inquiryData) => 
               color: #666;
               font-size: 12px;
             }
-            .notice {
-              background: #e3f2fd;
-              border-left: 4px solid #2196f3;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
-            .icon {
-              font-size: 48px;
-              text-align: center;
-              margin: 20px 0;
-            }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <div class="icon">🔔</div>
-              <h1>New Property Inquiry</h1>
+              <h1>🔔 New Property Inquiry</h1>
               <p>Someone is interested in your property!</p>
             </div>
             <div class="content">
@@ -642,34 +610,12 @@ const sendInquiryNotification = async (sellerEmail, sellerName, inquiryData) => 
                 </div>
               </div>
 
-              <h3 style="margin-top: 30px;">👤 Buyer Information:</h3>
+              <h3>👤 Buyer Information:</h3>
               <div class="buyer-details">
-                <div class="detail-row">
-                  <div class="detail-label">Full Name:</div>
-                  <div class="detail-value">${buyerName}</div>
-                </div>
-                <div class="detail-row">
-                  <div class="detail-label">Email:</div>
-                  <div class="detail-value"><a href="mailto:${buyerEmail}" style="color: #b04439; text-decoration: none;">${buyerEmail}</a></div>
-                </div>
-                <div class="detail-row">
-                  <div class="detail-label">Phone:</div>
-                  <div class="detail-value"><a href="tel:${buyerPhone}" style="color: #b04439; text-decoration: none;">${buyerPhone}</a></div>
-                </div>
-                <div class="detail-row">
-                  <div class="detail-label">Profession:</div>
-                  <div class="detail-value">${buyerProfession}</div>
-                </div>
-              </div>
-
-              <div class="notice">
-                <strong>📋 Next Steps:</strong>
-                <ol style="margin: 10px 0 0 0; padding-left: 20px;">
-                  <li>Log in to your DreamHome account</li>
-                  <li>Review the buyer's complete profile and identity proof</li>
-                  <li>Accept or decline the inquiry with a reason</li>
-                  <li>If accepted, your contact details will be shared with the buyer</li>
-                </ol>
+                <div><strong>Name:</strong> ${buyerName}</div>
+                <div><strong>Email:</strong> ${buyerEmail}</div>
+                <div><strong>Phone:</strong> ${buyerPhone}</div>
+                <div><strong>Profession:</strong> ${buyerProfession}</div>
               </div>
 
               <div style="text-align: center;">
@@ -678,18 +624,10 @@ const sendInquiryNotification = async (sellerEmail, sellerName, inquiryData) => 
                 </a>
               </div>
 
-              <p style="margin-top: 30px; font-size: 14px; color: #666;">
-                <strong>⏰ Time-sensitive:</strong> Buyers appreciate quick responses. 
-                Responding within 24 hours increases your chances of successful connections.
-              </p>
-
-              <p>Good luck with your property sale!</p>
-              
               <p>Best regards,<br><strong>The DreamHome Team</strong></p>
             </div>
             <div class="footer">
               <p>© 2024 DreamHome. All rights reserved.</p>
-              <p>This is an automated notification. You can manage your email preferences in your account settings.</p>
             </div>
           </div>
         </body>
@@ -750,31 +688,12 @@ const sendInquiryAcceptedEmail = async (buyerEmail, buyerName, inquiryData) => {
               padding: 30px;
               border-radius: 0 0 10px 10px;
             }
-            .success-icon {
-              font-size: 60px;
-              text-align: center;
-              margin: 20px 0;
-            }
-            .property-info {
-              background: #e8f5e9;
-              border-left: 4px solid #4caf50;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
             .contact-box {
               background: white;
               border: 2px solid #4caf50;
               border-radius: 8px;
               padding: 20px;
               margin: 20px 0;
-            }
-            .contact-detail {
-              padding: 10px 0;
-              border-bottom: 1px solid #f0f0f0;
-            }
-            .contact-detail:last-child {
-              border-bottom: none;
             }
             .cta-button {
               display: inline-block;
@@ -792,74 +711,34 @@ const sendInquiryAcceptedEmail = async (buyerEmail, buyerName, inquiryData) => {
               color: #666;
               font-size: 12px;
             }
-            .tips {
-              background: #fff3cd;
-              border-left: 4px solid #ffc107;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
-              <div class="success-icon">✅</div>
-              <h1>Inquiry Accepted!</h1>
+              <h1>✅ Inquiry Accepted!</h1>
               <p>The seller wants to connect with you</p>
             </div>
             <div class="content">
               <h2>Great News, ${buyerName}!</h2>
-              <p>The property owner has accepted your inquiry and is interested in discussing the property with you.</p>
+              <p>The property owner has accepted your inquiry.</p>
               
-              <div class="property-info">
-                <strong>📍 Property Details:</strong>
-                <div style="margin-top: 10px;">
-                  <div><strong>Title:</strong> ${propertyTitle}</div>
-                  <div><strong>Address:</strong> ${propertyAddress}</div>
-                </div>
-              </div>
-
-              <h3 style="margin-top: 30px;">📞 Seller Contact Information:</h3>
+              <h3>📞 Seller Contact:</h3>
               <div class="contact-box">
-                <div class="contact-detail">
-                  <strong>Name:</strong> ${sellerName}
-                </div>
-                <div class="contact-detail">
-                  <strong>Email:</strong> <a href="mailto:${sellerEmail}" style="color: #4caf50; text-decoration: none;">${sellerEmail}</a>
-                </div>
-                <div class="contact-detail">
-                  <strong>Phone:</strong> <a href="tel:${sellerPhone}" style="color: #4caf50; text-decoration: none;">${sellerPhone}</a>
-                </div>
+                <div><strong>Name:</strong> ${sellerName}</div>
+                <div><strong>Email:</strong> ${sellerEmail}</div>
+                <div><strong>Phone:</strong> ${sellerPhone}</div>
               </div>
 
               <div style="text-align: center;">
-                <a href="mailto:${sellerEmail}" class="cta-button">
-                  📧 Send Email
-                </a>
-                <a href="tel:${sellerPhone}" class="cta-button">
-                  📱 Call Now
-                </a>
+                <a href="mailto:${sellerEmail}" class="cta-button">📧 Send Email</a>
+                <a href="tel:${sellerPhone}" class="cta-button">📱 Call Now</a>
               </div>
 
-              <div class="tips">
-                <strong>💡 Tips for Your Conversation:</strong>
-                <ul style="margin: 10px 0 0 0; padding-left: 20px;">
-                  <li>Schedule a property viewing at your convenience</li>
-                  <li>Prepare your questions about the property</li>
-                  <li>Discuss payment terms and documentation</li>
-                  <li>Verify all property documents before proceeding</li>
-                  <li>Be professional and respectful in all communications</li>
-                </ul>
-              </div>
-
-              <p style="margin-top: 30px;">We wish you the best in finding your dream home!</p>
-              
               <p>Best regards,<br><strong>The DreamHome Team</strong></p>
             </div>
             <div class="footer">
               <p>© 2024 DreamHome. All rights reserved.</p>
-              <p>This is an automated notification.</p>
             </div>
           </div>
         </body>
@@ -883,7 +762,6 @@ const sendInquiryDeclinedEmail = async (buyerEmail, buyerName, inquiryData) => {
 
     const {
       propertyTitle,
-      propertyAddress,
       declineReason,
     } = inquiryData;
 
@@ -918,13 +796,6 @@ const sendInquiryDeclinedEmail = async (buyerEmail, buyerName, inquiryData) => {
               padding: 30px;
               border-radius: 0 0 10px 10px;
             }
-            .property-info {
-              background: #fff3e0;
-              border-left: 4px solid #ff9800;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
             .reason-box {
               background: white;
               border: 1px solid #e0e0e0;
@@ -934,7 +805,7 @@ const sendInquiryDeclinedEmail = async (buyerEmail, buyerName, inquiryData) => {
             }
             .cta-button {
               display: inline-block;
-              background: #b04439;
+              background: #667eea;
               color: white;
               padding: 12px 30px;
               text-decoration: none;
@@ -948,44 +819,20 @@ const sendInquiryDeclinedEmail = async (buyerEmail, buyerName, inquiryData) => {
               color: #666;
               font-size: 12px;
             }
-            .encouragement {
-              background: #e3f2fd;
-              border-left: 4px solid #2196f3;
-              padding: 15px;
-              margin: 20px 0;
-              border-radius: 4px;
-            }
           </style>
         </head>
         <body>
           <div class="container">
             <div class="header">
               <h1>Inquiry Status Update</h1>
-              <p>Property Inquiry Response</p>
             </div>
             <div class="content">
               <h2>Hello ${buyerName},</h2>
-              <p>Thank you for your interest in the property. Unfortunately, the seller has declined your inquiry at this time.</p>
+              <p>The seller has declined your inquiry for ${propertyTitle}.</p>
               
-              <div class="property-info">
-                <strong>📍 Property Details:</strong>
-                <div style="margin-top: 10px;">
-                  <div><strong>Title:</strong> ${propertyTitle}</div>
-                  <div><strong>Address:</strong> ${propertyAddress}</div>
-                </div>
-              </div>
-
-              <h3 style="margin-top: 30px;">Seller's Response:</h3>
+              <h3>Reason:</h3>
               <div class="reason-box">
-                <p style="margin: 0; color: #666;">${declineReason}</p>
-              </div>
-
-              <div class="encouragement">
-                <strong>🏠 Don't Give Up!</strong>
-                <p style="margin: 10px 0 0 0;">
-                  There are many other great properties available on DreamHome. 
-                  Keep searching and you'll find the perfect home for you!
-                </p>
+                <p>${declineReason}</p>
               </div>
 
               <div style="text-align: center;">
@@ -994,8 +841,6 @@ const sendInquiryDeclinedEmail = async (buyerEmail, buyerName, inquiryData) => {
                 </a>
               </div>
 
-              <p style="margin-top: 30px;">We're here to help you find your dream home. Keep exploring!</p>
-              
               <p>Best regards,<br><strong>The DreamHome Team</strong></p>
             </div>
             <div class="footer">
