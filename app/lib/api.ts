@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'https://dreamhome-4ut7.onrender.com/api',
+  baseURL: `${process.env.NEXT_PUBLIC_API_URL}/api`,
   withCredentials: true,
 });
 

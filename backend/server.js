@@ -5,13 +5,18 @@ require('dotenv').config();
 
 const app = express();
 
-// Middleware
+// Middleware - Updated CORS to allow your Vercel frontend
 app.use(
   cors({
-    origin: 'http://localhost:3000', // frontend URL
+    origin: [
+      'http://localhost:3000', // Local development
+      'https://dream-home-uxjv.vercel.app', // Your production frontend
+      'https://*.vercel.app' // All Vercel preview deployments
+    ],
     credentials: true,
   })
 );
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -31,6 +36,22 @@ app.use('/api/inquiries', require('./routes/inquiries')); // New inquiry routes
 // Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'Backend is running' });
+});
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({ 
+    message: 'DreamHome API Server',
+    status: 'Running',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      properties: '/api/properties',
+      favorites: '/api/favorites',
+      admin: '/api/admin',
+      inquiries: '/api/inquiries'
+    }
+  });
 });
 
 const PORT = process.env.PORT || 5000;
