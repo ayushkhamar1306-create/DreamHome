@@ -28,18 +28,6 @@ const UserSchema = new mongoose.Schema({
     enum: ['buyer', 'seller', 'admin'],
     default: 'buyer',
   },
-  isVerified: {
-    type: Boolean,
-    default: false,
-  },
-  otp: {
-    type: String,
-    select: false,
-  },
-  otpExpiry: {
-    type: Date,
-    select: false,
-  },
   createdAt: {
     type: Date,
     default: Date.now,
@@ -58,27 +46,6 @@ UserSchema.pre('save', async function (next) {
 // Match password
 UserSchema.methods.matchPassword = async function (enteredPassword) {
   return bcrypt.compare(enteredPassword, this.password);
-};
-
-// Generate OTP
-UserSchema.methods.generateOTP = function () {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  this.otp = otp;
-  this.otpExpiry = Date.now() + 10 * 60 * 1000; // 10 minutes
-  return otp;
-};
-
-// Verify OTP
-UserSchema.methods.verifyOTP = function (enteredOTP) {
-  if (!this.otp || !this.otpExpiry) {
-    return false;
-  }
-  
-  if (Date.now() > this.otpExpiry) {
-    return false; // OTP expired
-  }
-  
-  return this.otp === enteredOTP;
 };
 
 module.exports = mongoose.model('User', UserSchema);
